@@ -11,6 +11,106 @@ export default function ReportSummariser() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [summary, setSummary] = useState('');
+  const [currentLanguage, setCurrentLanguage] = useState('English');
+  const [currentText, setCurrentText] = useState('');
+
+  // Dummy translations for Telugu and Hindi
+  const translations = {
+    Telugu: `
+**రోగి నివేదిక సారాంశం**
+
+**రోగి సమాచారం:** జాన్ డో, 45 సంవత్సరాలు, పురుషుడు
+
+**ప్రధాన కనుగొనబడిన అంశాలు:**
+• రక్తపోత్తు: 140/90 mmHg (అధికం)
+• గుండె వేగం: 82 bpm (సాధారణం)
+• రక్తంలో చక్కెర: 180 mg/dL (అధికం)
+• కొలెస్ట్రాల్: 245 mg/dL (సరిహద్దు అధికం)
+
+**రోగ నిర్ధారణ:** మధుమేహం టైప్ 2 తో హైపర్‌టెన్షన్
+
+**సిఫార్సులు:**
+• హైపర్‌టెన్షన్ వ్యతిరేక మందులు ప్రారంభించండి
+• మధుమేహ నిర్వహణ ప్రోటోకాల్ ప్రారంభించండి
+• జీవనశైలి మార్పులు సిఫార్సు చేయబడ్డాయి
+• 2 వారాలలో ఫాలో-అప్
+
+**ప్రాధాన్యత స్థాయి:** మధ్యమం - కొనసాగుతున్న పర్యవేక్షణ మరియు చికిత్స సర్దుబాట్లు అవసరం.
+    `,
+    Hindi: `
+**मरीज़ रिपोर्ट सारांश**
+
+**मरीज़ की जानकारी:** जॉन डो, 45 वर्ष, पुरुष
+
+**मुख्य निष्कर्ष:**
+• रक्तचाप: 140/90 mmHg (उच्च)
+• हृदय गति: 82 bpm (सामान्य)
+• रक्त शर्करा: 180 mg/dL (उच्च)
+• कोलेस्ट्रॉल: 245 mg/dL (सीमा रेखा उच्च)
+
+**निदान:** टाइप 2 मधुमेह के साथ उच्च रक्तचाप
+
+**सिफारिशें:**
+• उच्च रक्तचाप रोधी दवा शुरू करें
+• मधुमेह प्रबंधन प्रोटोकॉल शुरू करें
+• जीवनशैली में बदलाव की सिफारिश
+• 2 सप्ताह में फॉलो-अप
+
+**प्राथमिकता स्तर:** मध्यम - निरंतर निगरानी और उपचार समायोजन की आवश्यकता।
+    `
+  };
+
+  const handleTranslate = (language: string) => {
+    if (language === 'English') {
+      setCurrentText(summary);
+    } else if (language === 'Telugu' || language === 'Hindi') {
+      setCurrentText(translations[language as keyof typeof translations]);
+    }
+    setCurrentLanguage(language);
+  };
+
+  const handleReadAloud = () => {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(currentText);
+      
+      // Set language-specific voice
+      const voices = window.speechSynthesis.getVoices();
+      let preferredVoice = null;
+      
+      if (currentLanguage === 'Telugu') {
+        preferredVoice = voices.find(voice => 
+          voice.lang.includes('te') || 
+          voice.name.toLowerCase().includes('telugu') ||
+          voice.lang.includes('hi-IN')
+        );
+        utterance.lang = 'te-IN';
+      } else if (currentLanguage === 'Hindi') {
+        preferredVoice = voices.find(voice => 
+          voice.lang.includes('hi') || 
+          voice.name.toLowerCase().includes('hindi')
+        );
+        utterance.lang = 'hi-IN';
+      } else {
+        preferredVoice = voices.find(voice => voice.lang.includes('en'));
+        utterance.lang = 'en-US';
+      }
+      
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      utterance.rate = 0.8;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      console.log('Speech synthesis not supported');
+    }
+  };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -20,7 +120,7 @@ export default function ReportSummariser() {
       
       // Simulate AI processing
       setTimeout(() => {
-        setSummary(`
+        const defaultSummary = `
 **Patient Report Summary**
 
 **Patient Information:** John Doe, 45 years old, Male
@@ -40,15 +140,22 @@ export default function ReportSummariser() {
 • Follow-up in 2 weeks
 
 **Priority Level:** Medium - requires ongoing monitoring and treatment adjustments.
-        `);
+        `;
+        setSummary(defaultSummary);
+        setCurrentText(defaultSummary);
+        setCurrentLanguage('English');
         setIsProcessing(false);
       }, 3000);
     }
   };
 
   const handleAction = (action: string) => {
-    console.log(`Performing action: ${action}`);
-    // In real implementation, these would call respective APIs
+    if (action === 'speak') {
+      handleReadAloud();
+    } else {
+      console.log(`Performing action: ${action}`);
+      // In real implementation, these would call respective APIs
+    }
   };
 
   return (
@@ -163,7 +270,7 @@ export default function ReportSummariser() {
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>AI-Generated Summary</span>
+                <span>AI-Generated Summary ({currentLanguage})</span>
                 <Badge variant="secondary" className="bg-accent/20 text-accent-dark">
                   Ready to Share
                 </Badge>
@@ -177,7 +284,7 @@ export default function ReportSummariser() {
                 {/* Summary Content */}
                 <div className="bg-gradient-card p-6 rounded-lg border border-border">
                   <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
-                    {summary}
+                    {currentText || summary}
                   </pre>
                 </div>
 
@@ -224,7 +331,16 @@ export default function ReportSummariser() {
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-muted-foreground">Available languages:</span>
                   {['English', 'Telugu', 'Hindi'].map((lang) => (
-                    <Badge key={lang} variant="outline" className="cursor-pointer hover:bg-accent/10">
+                    <Badge 
+                      key={lang} 
+                      variant={currentLanguage === lang ? "default" : "outline"} 
+                      className={`cursor-pointer transition-colors ${
+                        currentLanguage === lang 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'hover:bg-accent/10'
+                      }`}
+                      onClick={() => handleTranslate(lang)}
+                    >
                       {lang}
                     </Badge>
                   ))}
