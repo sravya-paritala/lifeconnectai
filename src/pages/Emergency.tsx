@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Phone, Users, UserCheck, Mic, MicOff, Play, Pause, Share2, Languages, Volume2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Phone, Users, UserCheck, Share2, Languages, Volume2 } from 'lucide-react';
 
 type UserType = 'general' | 'hospital' | null;
 type QuestionnaireState = 'selection' | 'questions' | 'summary';
@@ -57,8 +58,15 @@ export default function Emergency() {
   const [state, setState] = useState<QuestionnaireState>('selection');
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [responses, setResponses] = useState<string[]>([]);
-  const [isListening, setIsListening] = useState(false);
   const [summary, setSummary] = useState('');
+  const [flowActive, setFlowActive] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const timerRef = useRef<number | null>(null);
+  const [transcript, setTranscript] = useState('');
+  const [manualAnswer, setManualAnswer] = useState('');
+  const manualAnswerRef = useRef<string>('');
+  const transcriptRef = useRef<string>('');
+  const [status, setStatus] = useState<'idle'|'asking'|'listening'|'processing'|'done'>('idle');
 
   const handleUserTypeSelect = (type: UserType) => {
     setUserType(type);
@@ -114,10 +122,130 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     }
   };
 
-  const toggleListening = () => {
-    setIsListening(!isListening);
-    // In real implementation, this would start/stop speech recognition
+  // Automatic voice flow utilities
+  const speak = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve();
+    try { window.speechSynthesis.cancel(); } catch {}
+    return new Promise<void>((resolve) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'en-US';
+      u.rate = 1;
+      u.pitch = 1;
+      u.onend = () => resolve();
+      u.onerror = () => resolve();
+      window.speechSynthesis.speak(u);
+    });
   };
+
+  const startRecognition = () => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { recognitionRef.current = null; return null; }
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    setTranscript('');
+    transcriptRef.current = '';
+    rec.onresult = (e: any) => {
+      let collected = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        collected += e.results[i][0].transcript + ' ';
+      }
+      collected = collected.trim();
+      setTranscript(collected);
+      transcriptRef.current = collected;
+      if (/\bskip\b/i.test(collected)) {
+        try { rec.stop(); } catch {}
+        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+        setTranscript('Skipped');
+        transcriptRef.current = 'Skipped';
+        speak('Okay, skipping…').then(() => {
+          goNext('Skipped');
+        });
+      }
+    };
+    rec.onerror = () => {};
+    try { rec.start(); } catch {}
+    recognitionRef.current = rec;
+    return rec;
+  };
+
+  const stopRecognition = () => {
+    const rec = recognitionRef.current;
+    if (rec) {
+      try { rec.onresult = null; rec.onerror = null; rec.stop(); } catch {}
+    }
+    recognitionRef.current = null;
+  };
+
+  const goNext = (answer: string) => {
+    stopRecognition();
+    setManualAnswer('');
+    manualAnswerRef.current = '';
+    setStatus('processing');
+    setResponses((prev) => {
+      const normalized = /\bskip\b/i.test(answer) ? 'Skipped' : (answer ? answer : 'No response');
+      const newRes = [...prev, normalized];
+      const total = userType ? questions[userType].length : 0;
+      if (newRes.length >= total) {
+        try { window.speechSynthesis?.cancel(); } catch {}
+        generateSummary(newRes);
+        setState('summary');
+        setFlowActive(false);
+        setStatus('done');
+      } else {
+        setCurrentQuestion((q) => q + 1);
+      }
+      return newRes;
+    });
+  };
+
+  const askAndWait = async () => {
+    if (!userType) return;
+    setStatus('asking');
+    setTranscript('');
+    transcriptRef.current = '';
+    await speak(questions[userType][currentQuestion]);
+    setStatus('listening');
+    startRecognition();
+    if (timerRef.current) { clearTimeout(timerRef.current); }
+    timerRef.current = window.setTimeout(() => {
+      const manual = manualAnswerRef.current?.trim();
+      const voice = transcriptRef.current?.trim();
+      if (manual && /\bskip\b/i.test(manual)) {
+        speak('Okay, skipping…').then(() => goNext('Skipped'));
+        return;
+      }
+      if (voice && /\bskip\b/i.test(voice)) {
+        speak('Okay, skipping…').then(() => goNext('Skipped'));
+        return;
+      }
+      const answer = manual || voice || 'No response';
+      goNext(answer);
+    }, 3000);
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+      stopRecognition();
+      try { window.speechSynthesis?.cancel(); } catch {}
+    };
+  }, []);
+
+  // Drive the flow automatically
+  useEffect(() => {
+    if (state === 'questions' && userType) {
+      if (!flowActive) {
+        setFlowActive(true);
+        askAndWait();
+      } else {
+        askAndWait();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, userType, currentQuestion]);
 
   const handleAction = (action: string) => {
     console.log(`Performing action: ${action}`);
@@ -130,6 +258,15 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     setCurrentQuestion(0);
     setResponses([]);
     setSummary('');
+    setTranscript('');
+    transcriptRef.current = '';
+    setManualAnswer('');
+    manualAnswerRef.current = '';
+    setFlowActive(false);
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    stopRecognition();
+    try { window.speechSynthesis?.cancel(); } catch {}
+    setStatus('idle');
   };
 
   return (
