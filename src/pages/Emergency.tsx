@@ -379,44 +379,37 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                   {/* Voice Controls */}
                   <div className="flex items-center space-x-4 mb-4">
                     <Button
-                      variant={isListening ? "destructive" : "default"}
+                      variant="default"
                       size="lg"
-                      onClick={toggleListening}
+                      onClick={() => {}}
                       className="flex items-center space-x-2"
                     >
-                      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                      <span>{isListening ? 'Stop Listening' : 'Start Voice Response'}</span>
+                      
+                      <span>Listening…</span>
                     </Button>
                     
-                    {isListening && (
-                      <div className="flex items-center space-x-2 text-secondary">
-                        <div className="w-2 h-2 bg-secondary rounded-full animate-pulse"></div>
-                        <span className="text-sm">Listening...</span>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-2 text-secondary">
+                      <div className={`w-2 h-2 rounded-full ${status === 'listening' ? 'bg-secondary animate-pulse' : status === 'asking' ? 'bg-primary' : 'bg-muted-foreground'}`}></div>
+                      <span className="text-sm text-muted-foreground">
+                        {status === 'asking' && 'Asking…'}
+                        {status === 'listening' && 'Listening (3s)…'}
+                        {status === 'processing' && 'Processing…'}
+                        {status === 'idle' && 'Idle'}
+                        {status === 'done' && 'Completed'}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Mock Response Display */}
                   <div className="bg-muted/30 p-4 rounded-lg mb-4">
                     <p className="text-sm text-muted-foreground mb-2">Detected Response:</p>
                     <p className="text-foreground font-medium">
-                      {mockResponses[userType][currentQuestion]}
+                      {manualAnswer || transcript || (status === 'listening' ? '…' : 'No response yet')}
                     </p>
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex space-x-4">
-                  <Button 
-                    onClick={handleNextQuestion}
-                    className="flex-1 bg-gradient-primary hover:shadow-glow"
-                  >
-                    {currentQuestion < questions[userType].length - 1 ? 'Next Question' : 'Complete'}
-                  </Button>
-                  <Button variant="outline" onClick={handleSkip}>
-                    Skip
-                  </Button>
-                </div>
+                <div className="text-xs text-muted-foreground">Will move to next question automatically.</div>
               </div>
             </CardContent>
           </Card>
