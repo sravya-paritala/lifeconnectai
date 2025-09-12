@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { FileText, Upload, Camera, Download, Share2, Volume2, Languages } from 'lucide-react';
+import ShareButton from '@/components/ui/ShareButton';
 
 const supportedFormats = ['PDF', 'JPG', 'PNG', 'DOCX'];
 
@@ -290,14 +291,10 @@ export default function ReportSummariser() {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center space-x-2"
-                    onClick={() => handleAction('share')}
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>Share</span>
-                  </Button>
+                  <ShareButton
+                    title="Medical Report Summary"
+                    text={currentText || summary}
+                  />
                   
                   <Button 
                     variant="outline" 

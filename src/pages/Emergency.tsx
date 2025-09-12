@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Phone, Users, UserCheck, Share2, Languages, Volume2 } from 'lucide-react';
+import AmbulanceTracker from '@/components/ui/AmbulanceTracker';
+import ShareButton from '@/components/ui/ShareButton';
 
 type UserType = 'general' | 'hospital' | null;
 type QuestionnaireState = 'selection' | 'questions' | 'summary';
@@ -285,6 +287,9 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
           </div>
         </div>
 
+        {/* Ambulance Tracker - Only show during questionnaire or summary */}
+        {(state === 'questions' || state === 'summary') && <AmbulanceTracker />}
+
         {/* User Type Selection */}
         {state === 'selection' && (
           <Card className="shadow-card">
@@ -458,23 +463,11 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                     <span>Read Aloud</span>
                   </Button>
                   
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center space-x-2"
-                    onClick={() => handleAction('whatsapp')}
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>WhatsApp</span>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center space-x-2"
-                    onClick={() => handleAction('sms')}
-                  >
-                    <Phone className="w-4 h-4" />
-                    <span>SMS</span>
-                  </Button>
+                  <ShareButton
+                    title="Emergency Medical Report"
+                    text={summary}
+                    variant="outline"
+                  />
                 </div>
 
                 {/* Reset Button */}

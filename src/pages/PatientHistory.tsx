@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { FolderOpen, Upload, FileText, Download, Share2, Lock, Eye, Plus, Search } from 'lucide-react';
+import PatientReportViewer from '@/components/ui/PatientReportViewer';
+import ShareButton from '@/components/ui/ShareButton';
 
 interface Document {
   id: string;
@@ -159,6 +161,22 @@ export default function PatientHistory() {
           </Card>
         </div>
 
+        {/* Patient Reports Section */}
+        <Card className="mb-8 shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-primary" />
+              <span>Patient Reports</span>
+            </CardTitle>
+            <CardDescription>
+              View detailed medical reports and consultation summaries
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PatientReportViewer />
+          </CardContent>
+        </Card>
+
         {/* Documents Grid */}
         <div className="grid gap-4">
           <div className="flex items-center justify-between mb-4">
@@ -198,37 +216,12 @@ export default function PatientHistory() {
                       Download
                     </Button>
                     
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Share2 className="w-4 h-4 mr-2" />
-                          Share
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Share Medical Document</DialogTitle>
-                          <DialogDescription>
-                            Grant access to healthcare providers
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <Input placeholder="Doctor's email or hospital ID" />
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Access Duration</label>
-                            <select className="w-full p-2 border border-border rounded-md">
-                              <option>24 hours</option>
-                              <option>1 week</option>
-                              <option>1 month</option>
-                              <option>Permanent</option>
-                            </select>
-                          </div>
-                          <Button className="w-full bg-gradient-primary">
-                            Grant Access
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <ShareButton
+                      title={`Medical Document: ${doc.name}`}
+                      text={`Document Type: ${doc.type}, Date: ${new Date(doc.date).toLocaleDateString()}, Category: ${doc.category}`}
+                      variant="outline"
+                      size="sm"
+                    />
                   </div>
                 </div>
               </CardContent>
