@@ -1,4 +1,4 @@
-import { Menu, FileText, Phone, FolderOpen, X } from 'lucide-react';
+import { Menu, FileText, Phone, FolderOpen, Pill, BookOpen, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -24,6 +24,20 @@ const menuItems = [
     description: 'Securely store and manage medical records',
     path: '/patient-history',
     color: 'text-accent-dark'
+  },
+  {
+    icon: Pill,
+    title: 'Pharmacy Section',
+    description: 'Browse medicines, vitamins, and healthcare products',
+    path: '/pharmacy',
+    color: 'text-secondary'
+  },
+  {
+    icon: BookOpen,
+    title: 'Health Library',
+    description: 'Explore medical topics, symptoms, and treatments',
+    path: '/health-library',
+    color: 'text-accent-dark'
   }
 ];
 
@@ -31,14 +45,14 @@ export function HamburgerMenu() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-50 bg-card/80 backdrop-blur-sm shadow-card">
+        <Button variant="ghost" size="icon" className="fixed top-4 right-4 z-50 bg-card/80 backdrop-blur-sm shadow-card">
           <Menu className="h-5 w-5" />
           <span className="sr-only">Open menu</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-80">
         <SheetHeader className="text-left">
-          <SheetTitle className="text-xl font-bold text-primary">MediMithraAI</SheetTitle>
+          <SheetTitle className="text-xl font-bold text-primary">LifeConnectAI</SheetTitle>
           <SheetDescription>
             Your AI-powered healthcare companion
           </SheetDescription>

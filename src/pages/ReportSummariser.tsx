@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Upload, Camera, Download, Share2, Volume2, Languages } from 'lucide-react';
+import { DataVisualization } from '@/components/ui/DataVisualization';
+import { FileText, Upload, Camera, Download, Share2, Volume2, Highlighter, Square, Play, Pause } from 'lucide-react';
 import ShareButton from '@/components/ui/ShareButton';
 
 const supportedFormats = ['PDF', 'JPG', 'PNG', 'DOCX'];
@@ -14,57 +15,28 @@ export default function ReportSummariser() {
   const [summary, setSummary] = useState('');
   const [currentLanguage, setCurrentLanguage] = useState('English');
   const [currentText, setCurrentText] = useState('');
+  const [isHighlighted, setIsHighlighted] = useState(false);
+  const [isReading, setIsReading] = useState(false);
+  const [speechUtterance, setSpeechUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
-  // Dummy translations for Telugu and Hindi
+  // Dummy translations for all supported languages
   const translations = {
-    Telugu: `
-**రోగి నివేదిక సారాంశం**
-
-**రోగి సమాచారం:** జాన్ డో, 45 సంవత్సరాలు, పురుషుడు
-
-**ప్రధాన కనుగొనబడిన అంశాలు:**
-• రక్తపోత్తు: 140/90 mmHg (అధికం)
-• గుండె వేగం: 82 bpm (సాధారణం)
-• రక్తంలో చక్కెర: 180 mg/dL (అధికం)
-• కొలెస్ట్రాల్: 245 mg/dL (సరిహద్దు అధికం)
-
-**రోగ నిర్ధారణ:** మధుమేహం టైప్ 2 తో హైపర్‌టెన్షన్
-
-**సిఫార్సులు:**
-• హైపర్‌టెన్షన్ వ్యతిరేక మందులు ప్రారంభించండి
-• మధుమేహ నిర్వహణ ప్రోటోకాల్ ప్రారంభించండి
-• జీవనశైలి మార్పులు సిఫార్సు చేయబడ్డాయి
-• 2 వారాలలో ఫాలో-అప్
-
-**ప్రాధాన్యత స్థాయి:** మధ్యమం - కొనసాగుతున్న పర్యవేక్షణ మరియు చికిత్స సర్దుబాట్లు అవసరం.
-    `,
-    Hindi: `
-**मरीज़ रिपोर्ट सारांश**
-
-**मरीज़ की जानकारी:** जॉन डो, 45 वर्ष, पुरुष
-
-**मुख्य निष्कर्ष:**
-• रक्तचाप: 140/90 mmHg (उच्च)
-• हृदय गति: 82 bpm (सामान्य)
-• रक्त शर्करा: 180 mg/dL (उच्च)
-• कोलेस्ट्रॉल: 245 mg/dL (सीमा रेखा उच्च)
-
-**निदान:** टाइप 2 मधुमेह के साथ उच्च रक्तचाप
-
-**सिफारिशें:**
-• उच्च रक्तचाप रोधी दवा शुरू करें
-• मधुमेह प्रबंधन प्रोटोकॉल शुरू करें
-• जीवनशैली में बदलाव की सिफारिश
-• 2 सप्ताह में फॉलो-अप
-
-**प्राथमिकता स्तर:** मध्यम - निरंतर निगरानी और उपचार समायोजन की आवश्यकता।
-    `
+    Telugu: `**రోగి నివేదిక సారాంశం**\n\n**రోగి సమాచారం:** జాన్ డో, 45 సంవత్సరాలు, పురుషుడు\n\n**ప్రధాన కనుగొనబడిన అంశాలు:**\n• రక్తపోత్తు: 140/90 mmHg (అధికం)\n• గుండె వేగం: 82 bpm (సాధారణం)\n• రక్తంలో చక్కెర: 180 mg/dL (అధికం)`,
+    Hindi: `**मरीज़ रिपोर्ट सारांश**\n\n**मरीज़ की जानकारी:** जॉन डो, 45 वर्ष, पुरुष\n\n**मुख्य निष्कर्ष:**\n• रक्तचाप: 140/90 mmHg (उच्च)\n• हृदय गति: 82 bpm (सामान्य)\n• रक्त शर्करा: 180 mg/dL (उच्च)`,
+    Tamil: `**நோயாளர் அறிக்கை சுருக்கம்**\n\n**நோயாளர் தகவல்:** ஜான் டோ, 45 வயது, ஆண்\n\n**முக்கிய கண்டுபிடிப்புகள்:**\n• இரத்த அழுத்தம்: 140/90 mmHg (அதிகம்)\n• இதய துடிப்பு: 82 bpm (சாதாரணம்)`,
+    Malayalam: `**രോഗി റിപ്പോർട്ട് സംഗ്രഹം**\n\n**രോഗി വിവരങ്ങൾ:** ജോൺ ഡോ, 45 വയസ്സ്, പുരുഷൻ\n\n**പ്രധാന കണ്ടെത്തലുകൾ:**\n• രക്തസമ്മർദ്ദം: 140/90 mmHg (ഉയർന്നത്)\n• ഹൃദയമിടിപ്പ്: 82 bpm (സാധാരണം)`,
+    Kannada: `**ರೋಗಿಯ ವರದಿ ಸಾರಾಂಶ**\n\n**ರೋಗಿಯ ಮಾಹಿತಿ:** ಜಾನ್ ಡೋ, 45 ವರ್ಷ, ಪುರುಷ\n\n**ಮುಖ್ಯ ಸಂಶೋಧನೆಗಳು:**\n• ರಕ್ತದೊತ್ತಡ: 140/90 mmHg (ಅಧಿಕ)\n• ಹೃದಯ ಬಡಿತ: 82 bpm (ಸಾಮಾನ್ಯ)`,
+    Bengali: `**রোগীর রিপোর্ট সারসংক্ষেপ**\n\n**রোগীর তথ্য:** জন ডো, ৪৫ বছর, পুরুষ\n\n**প্রধান অনুসন্ধানসমূহ:**\n• রক্তচাপ: ১৪০/৯০ mmHg (উচ্চ)\n• হৃদস্পন্দন: ৮২ bpm (স্বাভাবিক)`,
+    Rajasthani: `**मरीज री रिपोर्ट सारांश**\n\n**मरीज री जानकारी:** जॉन डो, 45 साल, पुरुष\n\n**मुख्य बात:**\n• ब्लड प्रेशर: 140/90 mmHg (ज्यादा)\n• दिल री धड़कन: 82 bpm (सामान्य)`,
+    Marathi: `**रुग्ण अहवाल सारांश**\n\n**रुग्ण माहिती:** जॉन डो, ४५ वर्षे, पुरुष\n\n**मुख्य निष्कर्ष:**\n• रक्तदाब: १४०/९० mmHg (जास्त)\n• हृदयाचे ठोके: ८२ bpm (सामान्य)`
   };
 
   const handleTranslate = (language: string) => {
     if (language === 'English') {
       setCurrentText(summary);
-    } else if (language === 'Telugu' || language === 'Hindi') {
+    } else if (translations[language as keyof typeof translations]) {
       setCurrentText(translations[language as keyof typeof translations]);
     }
     setCurrentLanguage(language);
@@ -72,45 +44,107 @@ export default function ReportSummariser() {
 
   const handleReadAloud = () => {
     if ('speechSynthesis' in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(currentText);
-      
-      // Set language-specific voice
-      const voices = window.speechSynthesis.getVoices();
-      let preferredVoice = null;
-      
-      if (currentLanguage === 'Telugu') {
-        preferredVoice = voices.find(voice => 
-          voice.lang.includes('te') || 
-          voice.name.toLowerCase().includes('telugu') ||
-          voice.lang.includes('hi-IN')
-        );
-        utterance.lang = 'te-IN';
-      } else if (currentLanguage === 'Hindi') {
-        preferredVoice = voices.find(voice => 
-          voice.lang.includes('hi') || 
-          voice.name.toLowerCase().includes('hindi')
-        );
-        utterance.lang = 'hi-IN';
+      if (isReading) {
+        // Stop reading
+        window.speechSynthesis.cancel();
+        setIsReading(false);
+        setSpeechUtterance(null);
       } else {
-        preferredVoice = voices.find(voice => voice.lang.includes('en'));
-        utterance.lang = 'en-US';
+        // Start reading
+        const utterance = new SpeechSynthesisUtterance(currentText || summary);
+        
+        // Set language-specific voice
+        const voices = window.speechSynthesis.getVoices();
+        let preferredVoice = null;
+        
+        const langMap: { [key: string]: string } = {
+          'Telugu': 'te-IN',
+          'Hindi': 'hi-IN',
+          'Tamil': 'ta-IN',
+          'Malayalam': 'ml-IN',
+          'Kannada': 'kn-IN',
+          'Bengali': 'bn-IN',
+          'Rajasthani': 'hi-IN',
+          'Marathi': 'mr-IN'
+        };
+        
+        utterance.lang = langMap[currentLanguage] || 'en-US';
+        
+        if (currentLanguage !== 'English') {
+          preferredVoice = voices.find(voice => 
+            voice.lang.includes(utterance.lang.split('-')[0]) || 
+            voice.lang.includes('hi-IN')
+          );
+        } else {
+          preferredVoice = voices.find(voice => voice.lang.includes('en'));
+        }
+        
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+        
+        utterance.rate = 0.8;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        utterance.onend = () => {
+          setIsReading(false);
+          setSpeechUtterance(null);
+        };
+        
+        setSpeechUtterance(utterance);
+        setIsReading(true);
+        window.speechSynthesis.speak(utterance);
       }
-      
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
-      }
-      
-      utterance.rate = 0.8;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      
-      window.speechSynthesis.speak(utterance);
     } else {
       console.log('Speech synthesis not supported');
     }
+  };
+
+  const handleScanDocument = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setIsCameraOpen(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const handleCaptureDocument = () => {
+    if (videoRef.current) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      setIsCameraOpen(false);
+      
+      // Simulate processing
+      setIsProcessing(true);
+      setTimeout(() => {
+        const defaultSummary = `**Patient Report Summary**\n\n**Patient Information:** John Doe, 45 years old, Male\n\n**Key Findings:**\n• Blood pressure: 140/90 mmHg (elevated)\n• Heart rate: 82 bpm (normal)\n• Blood glucose: 180 mg/dL (high)\n• Cholesterol: 245 mg/dL (borderline high)\n\n**Diagnosis:** Hypertension with diabetes mellitus type 2\n\n**Recommendations:**\n• Start antihypertensive medication\n• Begin diabetes management protocol\n• Lifestyle modifications recommended\n• Follow-up in 2 weeks\n\n**Priority Level:** Medium - requires ongoing monitoring and treatment adjustments.`;
+        setSummary(defaultSummary);
+        setCurrentText(defaultSummary);
+        setCurrentLanguage('English');
+        setIsProcessing(false);
+      }, 3000);
+    }
+  };
+
+  const handleHighlight = () => {
+    setIsHighlighted(!isHighlighted);
+  };
+
+  const handleDownloadPDF = () => {
+    // Create a simple text file for demonstration
+    const element = document.createElement('a');
+    const file = new Blob([currentText || summary], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    element.download = 'medical-report-summary.txt';
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +264,7 @@ export default function ReportSummariser() {
 
               {/* Alternative Upload Methods */}
               <div className="flex justify-center space-x-4">
-                <Button variant="outline" className="flex items-center space-x-2">
+                <Button variant="outline" className="flex items-center space-x-2" onClick={handleScanDocument}>
                   <Camera className="w-4 h-4" />
                   <span>Scan Document</span>
                 </Button>
@@ -266,6 +300,30 @@ export default function ReportSummariser() {
           </Card>
         )}
 
+        {/* Camera Modal */}
+        {isCameraOpen && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold mb-4">Scan Document</h3>
+              <video ref={videoRef} autoPlay className="w-full rounded-lg mb-4" />
+              <div className="flex gap-3">
+                <Button onClick={handleCaptureDocument} className="flex-1">
+                  Capture
+                </Button>
+                <Button variant="outline" onClick={() => {
+                  if (videoRef.current) {
+                    const stream = videoRef.current.srcObject as MediaStream;
+                    stream.getTracks().forEach(track => track.stop());
+                  }
+                  setIsCameraOpen(false);
+                }} className="flex-1">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Results */}
         {summary && (
           <Card className="shadow-card">
@@ -282,9 +340,27 @@ export default function ReportSummariser() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {/* Summary Content */}
+                {/* Overview Section */}
+                <div className="bg-gradient-card p-4 rounded-lg border border-border">
+                  <h4 className="font-semibold text-foreground mb-2">Overview</h4>
+                  <div className="text-sm text-muted-foreground">
+                    <strong>Patient:</strong> John Doe, 45 years, Male<br/>
+                    <strong>Risk Level:</strong> Medium<br/>
+                    <strong>Key Issues:</strong> Hypertension, Diabetes Type 2
+                  </div>
+                </div>
+
+                {/* Detailed Summary Content */}
                 <div className="bg-gradient-card p-6 rounded-lg border border-border">
-                  <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
+                  <h4 className="font-semibold text-foreground mb-3">Detailed Summary</h4>
+                  <pre 
+                    className={`whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed ${
+                      isHighlighted ? 'highlight-key-points' : ''
+                    }`}
+                    style={isHighlighted ? {
+                      background: 'linear-gradient(120deg, transparent 0%, rgba(255, 255, 0, 0.3) 20%, rgba(255, 255, 0, 0.3) 80%, transparent 100%)'
+                    } : {}}
+                  >
                     {currentText || summary}
                   </pre>
                 </div>
@@ -299,35 +375,35 @@ export default function ReportSummariser() {
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => handleAction('download')}
+                    onClick={handleDownloadPDF}
                   >
                     <Download className="w-4 h-4" />
-                    <span>PDF</span>
+                    <span>Download PDF</span>
                   </Button>
                   
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => handleAction('translate')}
+                    onClick={handleHighlight}
                   >
-                    <Languages className="w-4 h-4" />
-                    <span>Translate</span>
+                    <Highlighter className="w-4 h-4" />
+                    <span>{isHighlighted ? 'Remove Highlight' : 'Highlight'}</span>
                   </Button>
                   
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => handleAction('speak')}
+                    onClick={handleReadAloud}
                   >
-                    <Volume2 className="w-4 h-4" />
-                    <span>Read Aloud</span>
+                    {isReading ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                    <span>{isReading ? 'Stop Reading' : 'Read Aloud'}</span>
                   </Button>
                 </div>
 
                 {/* Translation Options */}
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-muted-foreground">Available languages:</span>
-                  {['English', 'Telugu', 'Hindi'].map((lang) => (
+                  {['English', 'Telugu', 'Hindi', 'Tamil', 'Malayalam', 'Kannada', 'Bengali', 'Rajasthani', 'Marathi'].map((lang) => (
                     <Badge 
                       key={lang} 
                       variant={currentLanguage === lang ? "default" : "outline"} 
@@ -342,6 +418,9 @@ export default function ReportSummariser() {
                     </Badge>
                   ))}
                 </div>
+
+                {/* Data Visualization */}
+                <DataVisualization />
               </div>
             </CardContent>
           </Card>

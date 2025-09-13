@@ -2,7 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LearnMoreModal } from '@/components/ui/LearnMoreModal';
+import { Logo } from '@/components/ui/Logo';
 import { FileText, Phone, FolderOpen, Sparkles, Shield, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import hospitalWallpaper from '@/assets/hospital-wallpaper.jpg';
 
 const features = [
@@ -59,6 +61,9 @@ const highlights = [
 export default function Home() {
   return (
     <div className="min-h-screen">
+      {/* Logo */}
+      <Logo />
+      
       {/* Hero Section with Hospital Wallpaper */}
       <div 
         className="relative h-96 bg-cover bg-center flex items-center justify-center"
@@ -67,7 +72,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-primary/60 backdrop-blur-sm"></div>
         <div className="relative z-10 text-center text-primary-foreground px-6">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            MediMithraAI
+            LifeConnectAI
           </h1>
           <p className="text-xl md:text-2xl mb-6 max-w-2xl mx-auto">
             Your AI-powered healthcare companion for smarter medical management
@@ -93,7 +98,7 @@ export default function Home() {
             Revolutionizing Healthcare with AI
           </h2>
           <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-            MediMithraAI combines artificial intelligence with healthcare to provide instant medical report analysis, 
+            LifeConnectAI combines artificial intelligence with healthcare to provide instant medical report analysis, 
             emergency response assistance, and secure patient data management. Our platform empowers both patients 
             and healthcare professionals with intelligent tools for better medical outcomes.
           </p>
@@ -142,9 +147,13 @@ export default function Home() {
                           steps={feature.steps}
                           features={feature.features}
                         />
-                        <Button className="w-full bg-gradient-primary hover:shadow-glow transition-all">
-                          Get Started
-                        </Button>
+                        <Link to={feature.title === 'Report Summariser' ? '/report-summariser' : 
+                                 feature.title === 'Emergency Report Transmitter' ? '/emergency' : 
+                                 '/patient-history'}>
+                          <Button className="w-full bg-gradient-primary hover:shadow-glow transition-all">
+                            Get Started
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -157,7 +166,7 @@ export default function Home() {
         {/* App Benefits */}
         <div className="max-w-4xl mx-auto mt-16 p-8 bg-gradient-card rounded-2xl border border-border">
           <h3 className="text-2xl font-bold text-center text-foreground mb-8">
-            Why Choose MediMithraAI?
+            Why Choose LifeConnectAI?
           </h3>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="text-center">
@@ -165,21 +174,21 @@ export default function Home() {
                 <Sparkles className="w-8 h-8 text-primary-foreground" />
               </div>
               <h4 className="font-semibold text-foreground mb-2">Intelligent Analysis</h4>
-              <p className="text-sm text-muted-foreground">Advanced AI algorithms provide accurate medical insights and summaries.</p>
+              <p className="text-sm text-muted-foreground">Get instant AI-powered medical insights in seconds.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-secondary to-secondary/80 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-primary-foreground" />
               </div>
               <h4 className="font-semibold text-foreground mb-2">Secure & Private</h4>
-              <p className="text-sm text-muted-foreground">Your medical data is encrypted and protected with enterprise-grade security.</p>
+              <p className="text-sm text-muted-foreground">Enterprise-grade security keeps your data protected.</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-accent-dark to-accent rounded-full flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-8 h-8 text-accent-foreground" />
               </div>
               <h4 className="font-semibold text-foreground mb-2">Lightning Fast</h4>
-              <p className="text-sm text-muted-foreground">Get instant results and summaries in seconds, not minutes.</p>
+              <p className="text-sm text-muted-foreground">Process medical reports in seconds, not minutes.</p>
             </div>
           </div>
         </div>
