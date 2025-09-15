@@ -66,8 +66,10 @@ export default function Home() {
       
       {/* Hero Section with Hospital Wallpaper */}
       <div 
-        className="relative h-96 bg-cover bg-center flex items-center justify-center"
-        style={{ backgroundImage: `url(${hospitalWallpaper})` }}
+        className="relative min-h-screen bg-cover bg-center flex flex-col items-center justify-center"
+        style={{ 
+          backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${hospitalWallpaper})` 
+        }}
       >
         <div className="absolute inset-0 bg-primary/60 backdrop-blur-sm"></div>
         <div className="relative z-10 text-center text-primary-foreground px-6">

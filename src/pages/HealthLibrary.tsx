@@ -210,26 +210,6 @@ export default function HealthLibrary() {
           </div>
         </div>
 
-        {/* Call to Action */}
-        <Card className="bg-gradient-card border border-border">
-          <CardContent className="p-8 text-center">
-            <h3 className="text-2xl font-bold text-foreground mb-4">
-              Stay Informed About Your Health
-            </h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Get the latest health information, expert advice, and evidence-based resources 
-              delivered to your inbox. Subscribe to our health newsletter.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="bg-gradient-primary">
-                Subscribe to Newsletter
-              </Button>
-              <Button variant="outline">
-                Ask a Health Question
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -17,6 +17,11 @@ interface UserProfile {
   emergencyContact: string;
   allergies: string;
   medications: string;
+  emergencyContacts: Array<{
+    name: string;
+    phone: string;
+    relation: string;
+  }>;
 }
 
 const initialProfile: UserProfile = {
@@ -29,7 +34,12 @@ const initialProfile: UserProfile = {
   address: '123 Health Street, Medical City, State 12345',
   emergencyContact: 'Jane Doe - +91 9876543211',
   allergies: 'Penicillin, Shellfish',
-  medications: 'Metformin 500mg, Lisinopril 10mg'
+  medications: 'Metformin 500mg, Lisinopril 10mg',
+  emergencyContacts: [
+    { name: 'John Smith', phone: '+91 9876543210', relation: 'Family' },
+    { name: 'Sarah Johnson', phone: '+91 9876543211', relation: 'Friend' },
+    { name: 'Dr. Michael Brown', phone: '+91 9876543212', relation: 'Doctor' }
+  ]
 };
 
 export default function Profile() {

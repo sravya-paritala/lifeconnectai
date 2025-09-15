@@ -3,9 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Phone, Users, UserCheck, Share2, Languages, Volume2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Phone, Users, UserCheck, Share2, Languages, Volume2, AlertTriangle, VolumeX } from 'lucide-react';
 import AmbulanceTracker from '@/components/ui/AmbulanceTracker';
 import ShareButton from '@/components/ui/ShareButton';
+import { toast } from '@/hooks/use-toast';
 
 type UserType = 'general' | 'hospital' | null;
 type QuestionnaireState = 'selection' | 'questions' | 'summary';
@@ -68,7 +70,19 @@ export default function Emergency() {
   const [manualAnswer, setManualAnswer] = useState('');
   const manualAnswerRef = useRef<string>('');
   const transcriptRef = useRef<string>('');
+  const [textInput, setTextInput] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedSummary, setTranslatedSummary] = useState('');
+  const [isReading, setIsReading] = useState(false);
+  const [isReadingPaused, setIsReadingPaused] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [status, setStatus] = useState<'idle'|'asking'|'listening'|'processing'|'done'>('idle');
+  const [emergencyContacts] = useState([
+    { name: 'John Smith', phone: '+91 9876543210', relation: 'Family' },
+    { name: 'Sarah Johnson', phone: '+91 9876543211', relation: 'Friend' },
+    { name: 'Dr. Michael Brown', phone: '+91 9876543212', relation: 'Doctor' }
+  ]);
 
   const handleUserTypeSelect = (type: UserType) => {
     setUserType(type);
@@ -276,19 +290,87 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-secondary to-secondary/80 rounded-xl">
-              <Phone className="w-8 h-8 text-primary-foreground" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-gradient-to-br from-secondary to-secondary/80 rounded-xl">
+                <Phone className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Emergency Report Transmitter</h1>
+                <p className="text-muted-foreground">Voice-driven emergency questionnaire system</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Emergency Report Transmitter</h1>
-              <p className="text-muted-foreground">Voice-driven emergency questionnaire system</p>
-            </div>
+          </div>
+          
+          {/* Life Alert Button */}
+          <div className="mb-6">
+            <Button 
+              variant="destructive" 
+              size="lg"
+              onClick={() => {
+                // Send emergency alert to contacts
+                emergencyContacts.forEach(contact => {
+                  console.log(`Sending emergency alert to ${contact.name} at ${contact.phone}`);
+                });
+                toast({
+                  title: "Emergency Alert Sent!",
+                  description: `Alert sent to ${emergencyContacts.length} emergency contacts`,
+                  variant: "destructive"
+                });
+              }}
+              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700"
+            >
+              <AlertTriangle className="w-5 h-5" />
+              <span>LIFE ALERT - Send Emergency Message</span>
+            </Button>
           </div>
         </div>
 
-        {/* Ambulance Tracker - Only show during questionnaire or summary */}
-        {(state === 'questions' || state === 'summary') && <AmbulanceTracker />}
+        {/* Ambulance Tracker - Updated Layout */}
+        {(state === 'questions' || state === 'summary') && (
+          <div className="grid md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="text-lg">Ambulance Status</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Current Location</p>
+                    <p className="font-medium">Downtown Medical Center</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Destination</p>
+                    <p className="font-medium">City General Hospital</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Estimated Arrival</p>
+                    <p className="font-medium text-primary">8 minutes</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Live Tracker</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-muted rounded-lg p-8 text-center">
+                    <p className="text-muted-foreground mb-2">Live Map View</p>
+                    <div className="w-full h-32 bg-primary/10 rounded border-2 border-dashed border-primary/20 flex items-center justify-center">
+                      <span className="text-primary">Map Visualization</span>
+                    </div>
+                    <div className="mt-4 bg-gradient-primary rounded-full h-2">
+                      <div className="bg-white/30 h-2 rounded-full w-3/4"></div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">Progress: 75%</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
 
         {/* User Type Selection */}
         {state === 'selection' && (
@@ -375,11 +457,28 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                   ></div>
                 </div>
 
-                {/* Current Question */}
+                 {/* Current Question */}
                 <div className="bg-gradient-card p-6 rounded-lg border border-border">
                   <h3 className="text-xl font-semibold text-foreground mb-4">
                     {questions[userType][currentQuestion]}
                   </h3>
+                  
+                  {/* Text Input Option */}
+                  <div className="mb-4">
+                    <Input
+                      placeholder="Type your answer here (optional)"
+                      value={textInput}
+                      onChange={(e) => {
+                        setTextInput(e.target.value);
+                        setManualAnswer(e.target.value);
+                        manualAnswerRef.current = e.target.value;
+                      }}
+                      className="mb-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      You can type your answer or speak. The system will automatically move to the next question in 3 seconds.
+                    </p>
+                  </div>
                   
                   {/* Voice Controls */}
                   <div className="flex items-center space-x-4 mb-4">
@@ -409,7 +508,7 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                   <div className="bg-muted/30 p-4 rounded-lg mb-4">
                     <p className="text-sm text-muted-foreground mb-2">Detected Response:</p>
                     <p className="text-foreground font-medium">
-                      {manualAnswer || transcript || (status === 'listening' ? '…' : 'No response yet')}
+                      {textInput || transcript || (status === 'listening' ? '…' : 'No response yet')}
                     </p>
                   </div>
                 </div>
@@ -436,10 +535,32 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
+                {/* Language Selection & Translation */}
+                {isTranslating && (
+                  <div className="mb-4">
+                    <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select Language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="hi">Hindi</SelectItem>
+                        <SelectItem value="te">Telugu</SelectItem>
+                        <SelectItem value="ta">Tamil</SelectItem>
+                        <SelectItem value="ml">Malayalam</SelectItem>
+                        <SelectItem value="kn">Kannada</SelectItem>
+                        <SelectItem value="bn">Bengali</SelectItem>
+                        <SelectItem value="raj">Rajasthani</SelectItem>
+                        <SelectItem value="mr">Marathi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Summary Content */}
                 <div className="bg-gradient-card p-6 rounded-lg border border-border">
                   <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
-                    {summary}
+                    {translatedSummary || summary}
                   </pre>
                 </div>
 
@@ -448,7 +569,7 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => handleAction('translate')}
+                    onClick={() => setIsTranslating(!isTranslating)}
                   >
                     <Languages className="w-4 h-4" />
                     <span>Translate</span>
@@ -457,10 +578,37 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => handleAction('speak')}
+                    onClick={() => {
+                      if (!isReading) {
+                        setIsReading(true);
+                        const utterance = new SpeechSynthesisUtterance(summary);
+                        speechRef.current = utterance;
+                        speechSynthesis.speak(utterance);
+                        utterance.onend = () => setIsReading(false);
+                      }
+                    }}
                   >
                     <Volume2 className="w-4 h-4" />
                     <span>Read Aloud</span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center space-x-2"
+                    onClick={() => {
+                      if (isReading) {
+                        if (isReadingPaused) {
+                          speechSynthesis.resume();
+                          setIsReadingPaused(false);
+                        } else {
+                          speechSynthesis.pause();
+                          setIsReadingPaused(true);
+                        }
+                      }
+                    }}
+                  >
+                    <VolumeX className="w-4 h-4" />
+                    <span>{isReadingPaused ? 'Continue' : 'Stop Reading'}</span>
                   </Button>
                   
                   <ShareButton
