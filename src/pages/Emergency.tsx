@@ -326,45 +326,132 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
           </div>
         </div>
 
-        {/* Ambulance Tracker - Updated Layout */}
+        {/* Ambulance Tracker - Enhanced Layout */}
         {(state === 'questions' || state === 'summary') && (
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             <div>
               <Card className="h-fit">
                 <CardHeader>
-                  <CardTitle className="text-lg">Ambulance Status</CardTitle>
+                  <CardTitle className="text-lg flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>🚑 Ambulance Status</span>
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Current Location</p>
-                    <p className="font-medium">Downtown Medical Center</p>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center space-x-3">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                      Available - En Route
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Destination</p>
-                    <p className="font-medium">City General Hospital</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Estimated Arrival</p>
-                    <p className="font-medium text-primary">8 minutes</p>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <span className="text-blue-600">📍</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Current Location</p>
+                        <p className="font-semibold text-foreground">Downtown Medical Center</p>
+                        <p className="text-xs text-muted-foreground">Lat: 17.3850, Lng: 78.4867</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-red-100 rounded-full">
+                        <span className="text-red-600">🎯</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Destination</p>
+                        <p className="font-semibold text-foreground">City General Hospital</p>
+                        <p className="text-xs text-muted-foreground">Emergency Department</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="p-2 bg-orange-100 rounded-full">
+                        <span className="text-orange-600">⏱️</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-muted-foreground">Estimated Arrival Time</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-2xl font-bold text-primary">8 mins</p>
+                          <p className="text-sm text-muted-foreground">4.2 km remaining</p>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full transition-all duration-1000"
+                            style={{ width: '75%' }}
+                          ></div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Progress: 75% complete</p>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+            
             <div>
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Live Tracker</CardTitle>
+                  <CardTitle className="text-lg">🗺️ Live Map Visualization</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-muted rounded-lg p-8 text-center">
-                    <p className="text-muted-foreground mb-2">Live Map View</p>
-                    <div className="w-full h-32 bg-primary/10 rounded border-2 border-dashed border-primary/20 flex items-center justify-center">
-                      <span className="text-primary">Map Visualization</span>
+                  <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
+                    {/* Mock Map Interface */}
+                    <div className="relative w-full h-48 bg-gradient-to-b from-blue-100 to-green-100 rounded-lg border overflow-hidden">
+                      {/* Roads */}
+                      <div className="absolute inset-0">
+                        <div className="absolute top-8 left-0 w-full h-1 bg-gray-400"></div>
+                        <div className="absolute top-16 left-0 w-full h-1 bg-gray-400"></div>
+                        <div className="absolute top-24 left-0 w-full h-1 bg-gray-400"></div>
+                        <div className="absolute left-8 top-0 w-1 h-full bg-gray-400"></div>
+                        <div className="absolute left-16 top-0 w-1 h-full bg-gray-400"></div>
+                        <div className="absolute left-24 top-0 w-1 h-full bg-gray-400"></div>
+                      </div>
+                      
+                      {/* Ambulance Icon */}
+                      <div className="absolute top-6 left-12 animate-pulse">
+                        <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">🚑</span>
+                        </div>
+                      </div>
+                      
+                      {/* Hospital Icon */}
+                      <div className="absolute bottom-6 right-8">
+                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs">🏥</span>
+                        </div>
+                      </div>
+                      
+                      {/* Route Line */}
+                      <svg className="absolute inset-0 w-full h-full">
+                        <path
+                          d="M 50 40 Q 100 60 150 160"
+                          stroke="#ef4444"
+                          strokeWidth="3"
+                          fill="none"
+                          strokeDasharray="5,5"
+                          className="animate-pulse"
+                        />
+                      </svg>
                     </div>
-                    <div className="mt-4 bg-gradient-primary rounded-full h-2">
-                      <div className="bg-white/30 h-2 rounded-full w-3/4"></div>
+                    
+                    {/* Map Legend */}
+                    <div className="mt-4 flex justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span>Ambulance</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span>Hospital</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <div className="w-4 h-1 bg-red-400 border-dashed"></div>
+                        <span>Route</span>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">Progress: 75%</p>
                   </div>
                 </CardContent>
               </Card>

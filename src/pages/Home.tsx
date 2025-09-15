@@ -66,26 +66,26 @@ export default function Home() {
       
       {/* Hero Section with Hospital Wallpaper */}
       <div 
-        className="relative min-h-screen bg-cover bg-center flex flex-col items-center justify-center"
+        className="relative h-96 bg-cover bg-center flex flex-col items-center justify-center"
         style={{ 
           backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${hospitalWallpaper})` 
         }}
       >
         <div className="absolute inset-0 bg-primary/60 backdrop-blur-sm"></div>
         <div className="relative z-10 text-center text-primary-foreground px-6">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">
             LifeConnectAI
           </h1>
-          <p className="text-xl md:text-2xl mb-6 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl mb-4 max-w-2xl mx-auto">
             Your AI-powered healthcare companion for smarter medical management
           </p>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-3">
             {highlights.map((highlight, index) => {
               const Icon = highlight.icon;
               return (
-                <div key={index} className="flex items-center space-x-2 bg-primary-foreground/20 px-4 py-2 rounded-full">
-                  <Icon className="w-4 h-4" />
-                  <span className="text-sm font-medium">{highlight.text}</span>
+                <div key={index} className="flex items-center space-x-2 bg-primary-foreground/20 px-3 py-1 rounded-full">
+                  <Icon className="w-3 h-3" />
+                  <span className="text-xs font-medium">{highlight.text}</span>
                 </div>
               );
             })}
