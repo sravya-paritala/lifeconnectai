@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Phone, Users, UserCheck, Share2, Languages, Volume2, AlertTriangle, VolumeX, MapPin, Navigation } from 'lucide-react';
+import { Phone, Users, UserCheck, Volume2, AlertTriangle, VolumeX, MapPin, Download, Send, Search } from 'lucide-react';
 import ShareButton from '@/components/ui/ShareButton';
 import { toast } from '@/hooks/use-toast';
 
@@ -24,7 +24,7 @@ const questions: Record<'general' | 'hospital', Question[]> = {
   general: [
     { 
       text: "What is the emergency? (Describe briefly)",
-      type: "text",
+      type: "radio",
       options: ["Accident", "Unconscious person", "Chest pain", "Fire", "Fall", "Other"]
     },
     { 
@@ -41,52 +41,53 @@ const questions: Record<'general' | 'hospital', Question[]> = {
       text: "Are there visible injuries or bleeding?",
       type: "radio",
       options: ["Severe bleeding", "Minor bleeding", "Broken bone suspected", "Burns", "No visible injuries"]
-    },
-    { 
-      text: "Where exactly are you located? (Provide landmark or select hospital)",
-      type: "location"
     }
   ],
   hospital: [
     { 
       text: "Primary complaint / reason for emergency",
-      type: "text",
-      options: ["Chest pain", "Dyspnea", "Trauma", "Seizure", "Altered consciousness", "Other"]
+      type: "radio",
+      options: ["Skip", "Chest pain", "Dyspnea", "Trauma", "Seizure", "Altered consciousness", "Other"]
     },
     { 
       text: "Time of onset / when symptoms started",
-      type: "text"
+      type: "text",
+      options: ["Skip"]
     },
     { 
       text: "Patient's level of consciousness (AVPU)",
       type: "radio",
-      options: ["A - Alert", "V - Responds to voice", "P - Responds to pain", "U - Unresponsive"]
+      options: ["Skip", "A - Alert", "V - Responds to voice", "P - Responds to pain", "U - Unresponsive"]
     },
     { 
       text: "Vital signs (if available) - Heart rate",
-      type: "text"
+      type: "text",
+      options: ["Skip"]
     },
     { 
       text: "Vital signs - Blood pressure",
-      type: "text"
+      type: "text",
+      options: ["Skip"]
     },
     { 
       text: "Current breathing status",
       type: "radio",
-      options: ["Normal", "Respiratory distress", "Cyanosis", "Wheezing / crackles", "Not breathing / cardiac arrest"]
+      options: ["Skip", "Normal", "Respiratory distress", "Cyanosis", "Wheezing / crackles", "Not breathing / cardiac arrest"]
     },
     { 
       text: "History of present illness (brief summary)",
-      type: "text"
+      type: "text",
+      options: ["Skip"]
     },
     { 
       text: "Past medical history",
       type: "radio",
-      options: ["Diabetes", "Hypertension", "Cardiac disease", "Stroke", "Asthma/COPD", "None", "Other"]
+      options: ["Skip", "Diabetes", "Hypertension", "Cardiac disease", "Stroke", "Asthma/COPD", "None", "Other"]
     },
     { 
       text: "Medications / Allergies",
-      type: "text"
+      type: "text",
+      options: ["Skip"]
     }
   ]
 };
@@ -115,6 +116,7 @@ export default function Emergency() {
   const [radioValue, setRadioValue] = useState('');
   const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
   const [locationEnabled, setLocationEnabled] = useState(false);
+  const [hospitalSearch, setHospitalSearch] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedSummary, setTranslatedSummary] = useState('');
@@ -138,12 +140,13 @@ export default function Emergency() {
 
   const generateSummary = (allResponses: string[]) => {
     if (userType === 'general') {
+      const hospitalName = selectedHospital ? dummyHospitals.find(h => h.id === selectedHospital)?.name : 'Not selected';
       setSummary(`Emergency Report Summary:
 Emergency Type: ${allResponses[0]}
 Patient Consciousness: ${allResponses[1]}
 Breathing Status: ${allResponses[2]}
 Injuries/Bleeding: ${allResponses[3]}
-Location: ${allResponses[4]}
+Selected Hospital: ${hospitalName}
 
 Immediate medical attention recommended. Report has been sent to the selected hospital.`);
     } else {
@@ -394,7 +397,7 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                           For family members, bystanders, or non-medical personnel reporting an emergency
                         </p>
                         <Badge variant="outline" className="bg-primary/10 text-primary">
-                          5 Questions
+                          4 Questions
                         </Badge>
                       </div>
                     </div>
@@ -466,33 +469,15 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                         
                         {/* Question Input Based on Type */}
                         {currentQ.type === 'text' && (
-                          <div className="space-y-4">
-                            {currentQ.options && (
-                              <Select onValueChange={(val) => {
-                                setTextInput(val);
-                                setManualAnswer(val);
-                                manualAnswerRef.current = val;
-                              }}>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select an option or type below" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {currentQ.options.map((opt) => (
-                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            )}
-                            <Input
-                              placeholder="Or type your answer here"
-                              value={textInput}
-                              onChange={(e) => {
-                                setTextInput(e.target.value);
-                                setManualAnswer(e.target.value);
-                                manualAnswerRef.current = e.target.value;
-                              }}
-                            />
-                          </div>
+                          <Input
+                            placeholder="Type your answer here"
+                            value={textInput}
+                            onChange={(e) => {
+                              setTextInput(e.target.value);
+                              setManualAnswer(e.target.value);
+                              manualAnswerRef.current = e.target.value;
+                            }}
+                          />
                         )}
 
                         {currentQ.type === 'radio' && currentQ.options && (
@@ -506,45 +491,6 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                               ))}
                             </div>
                           </RadioGroup>
-                        )}
-
-                        {currentQ.type === 'location' && (
-                          <div className="space-y-4">
-                            {!locationEnabled && (
-                              <Button onClick={handleLocationEnable} className="w-full">
-                                <MapPin className="w-4 h-4 mr-2" />
-                                Enable Location & Show Nearby Hospitals
-                              </Button>
-                            )}
-                            {locationEnabled && (
-                              <div className="space-y-4">
-                                <div className="flex items-center space-x-2">
-                                  <Input
-                                    placeholder="Search hospital or enter location"
-                                    value={textInput}
-                                    onChange={(e) => {
-                                      setTextInput(e.target.value);
-                                      setManualAnswer(e.target.value);
-                                      manualAnswerRef.current = e.target.value;
-                                    }}
-                                    className="flex-1"
-                                  />
-                                  <Select onValueChange={(val) => handleHospitalSelect(parseInt(val))}>
-                                    <SelectTrigger className="w-48">
-                                      <SelectValue placeholder="Select hospital" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {dummyHospitals.map((hospital) => (
-                                        <SelectItem key={hospital.id} value={hospital.id.toString()}>
-                                          {hospital.name}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            )}
-                          </div>
                         )}
                         
                         {/* Voice Status */}
@@ -575,58 +521,115 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                   </CardContent>
                 </Card>
 
-                {/* Live Map Visualization - Bottom */}
-                {locationEnabled && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg">🗺️ Nearby Hospitals</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
-                        <div className="relative w-full h-64 bg-gradient-to-b from-blue-100 to-green-100 rounded-lg border overflow-hidden">
-                          {/* Roads */}
-                          <div className="absolute inset-0">
-                            <div className="absolute top-8 left-0 w-full h-1 bg-gray-400"></div>
-                            <div className="absolute top-16 left-0 w-full h-1 bg-gray-400"></div>
-                            <div className="absolute top-24 left-0 w-full h-1 bg-gray-400"></div>
-                            <div className="absolute left-8 top-0 w-1 h-full bg-gray-400"></div>
-                            <div className="absolute left-16 top-0 w-1 h-full bg-gray-400"></div>
-                            <div className="absolute left-24 top-0 w-1 h-full bg-gray-400"></div>
-                          </div>
-                          
-                          {/* Hospital Pins */}
-                          {dummyHospitals.map((hospital, idx) => (
+                {/* Location Card with Hospital Search - Always visible at bottom */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="w-5 h-5" />
+                      Hospital Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Hospital Search Bar */}
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search hospital by name or location"
+                            value={hospitalSearch}
+                            onChange={(e) => setHospitalSearch(e.target.value)}
+                            className="pl-10"
+                          />
+                        </div>
+                        {!locationEnabled && (
+                          <Button onClick={handleLocationEnable} size="sm">
+                            <MapPin className="w-4 h-4 mr-2" />
+                            Enable Location
+                          </Button>
+                        )}
+                      </div>
+
+                      {/* Filtered Hospital List */}
+                      <div className="space-y-2">
+                        {dummyHospitals
+                          .filter(h => 
+                            hospitalSearch === '' || 
+                            h.name.toLowerCase().includes(hospitalSearch.toLowerCase())
+                          )
+                          .map((hospital) => (
                             <div
                               key={hospital.id}
-                              className={`absolute cursor-pointer transform hover:scale-110 transition-transform ${selectedHospital === hospital.id ? 'z-10' : ''}`}
-                              style={{
-                                top: `${20 + idx * 15}%`,
-                                left: `${15 + idx * 20}%`
-                              }}
                               onClick={() => handleHospitalSelect(hospital.id)}
+                              className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                                selectedHospital === hospital.id
+                                  ? 'bg-primary/10 border-primary'
+                                  : 'hover:bg-muted/50'
+                              }`}
                             >
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedHospital === hospital.id ? 'bg-green-500 ring-4 ring-green-300' : 'bg-blue-500'}`}>
-                                <span className="text-white text-xs">🏥</span>
-                              </div>
-                              <div className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs whitespace-nowrap">
-                                {hospital.name}
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-foreground">{hospital.name}</p>
+                                  <p className="text-sm text-muted-foreground">{hospital.distance} away</p>
+                                </div>
+                                {selectedHospital === hospital.id && (
+                                  <Badge className="bg-primary">Selected</Badge>
+                                )}
                               </div>
                             </div>
                           ))}
-                          
-                          {/* User Location */}
-                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                      </div>
+
+                      {/* Live Map Visualization */}
+                      {locationEnabled && (
+                        <div className="mt-4">
+                          <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
+                            <div className="relative w-full h-64 bg-gradient-to-b from-blue-100 to-green-100 rounded-lg border overflow-hidden">
+                              {/* Roads */}
+                              <div className="absolute inset-0">
+                                <div className="absolute top-8 left-0 w-full h-1 bg-gray-400"></div>
+                                <div className="absolute top-16 left-0 w-full h-1 bg-gray-400"></div>
+                                <div className="absolute top-24 left-0 w-full h-1 bg-gray-400"></div>
+                                <div className="absolute left-8 top-0 w-1 h-full bg-gray-400"></div>
+                                <div className="absolute left-16 top-0 w-1 h-full bg-gray-400"></div>
+                                <div className="absolute left-24 top-0 w-1 h-full bg-gray-400"></div>
+                              </div>
+                              
+                              {/* Hospital Pins */}
+                              {dummyHospitals.map((hospital, idx) => (
+                                <div
+                                  key={hospital.id}
+                                  className={`absolute cursor-pointer transform hover:scale-110 transition-transform ${selectedHospital === hospital.id ? 'z-10' : ''}`}
+                                  style={{
+                                    top: `${20 + idx * 15}%`,
+                                    left: `${15 + idx * 20}%`
+                                  }}
+                                  onClick={() => handleHospitalSelect(hospital.id)}
+                                >
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedHospital === hospital.id ? 'bg-green-500 ring-4 ring-green-300' : 'bg-blue-500'}`}>
+                                    <span className="text-white text-xs">🏥</span>
+                                  </div>
+                                  <div className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs whitespace-nowrap">
+                                    {hospital.name}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {/* User Location */}
+                              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4 text-xs text-muted-foreground">
+                              Click on hospital pins to select
+                            </div>
                           </div>
                         </div>
-                        
-                        <div className="mt-4 text-xs text-muted-foreground">
-                          Click on hospital pins to select, or use the dropdown above
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
 
@@ -666,20 +669,21 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                       {currentQ.type === 'text' && (
                         <div className="space-y-4">
                           {currentQ.options && (
-                            <Select onValueChange={(val) => {
+                            <RadioGroup value={radioValue} onValueChange={(val) => {
+                              setRadioValue(val);
                               setTextInput(val);
                               setManualAnswer(val);
                               manualAnswerRef.current = val;
                             }}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an option or type below" />
-                              </SelectTrigger>
-                              <SelectContent>
+                              <div className="space-y-3">
                                 {currentQ.options.map((opt) => (
-                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  <div key={opt} className="flex items-center space-x-2">
+                                    <RadioGroupItem value={opt} id={`hospital-${opt}`} />
+                                    <Label htmlFor={`hospital-${opt}`} className="cursor-pointer">{opt}</Label>
+                                  </div>
                                 ))}
-                              </SelectContent>
-                            </Select>
+                              </div>
+                            </RadioGroup>
                           )}
                           <Input
                             placeholder="Or type your answer here"
@@ -698,8 +702,8 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                           <div className="space-y-3">
                             {currentQ.options.map((opt) => (
                               <div key={opt} className="flex items-center space-x-2">
-                                <RadioGroupItem value={opt} id={opt} />
-                                <Label htmlFor={opt} className="cursor-pointer">{opt}</Label>
+                                <RadioGroupItem value={opt} id={`hospital-radio-${opt}`} />
+                                <Label htmlFor={`hospital-radio-${opt}`} className="cursor-pointer">{opt}</Label>
                               </div>
                             ))}
                           </div>
@@ -787,15 +791,6 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                   <Button 
                     variant="outline" 
                     className="flex items-center space-x-2"
-                    onClick={() => setIsTranslating(!isTranslating)}
-                  >
-                    <Languages className="w-4 h-4" />
-                    <span>Translate</span>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    className="flex items-center space-x-2"
                     onClick={() => {
                       if (!isReading) {
                         setIsReading(true);
@@ -805,6 +800,7 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                         utterance.onend = () => setIsReading(false);
                       }
                     }}
+                    disabled={isReading}
                   >
                     <Volume2 className="w-4 h-4" />
                     <span>Read Aloud</span>
@@ -815,25 +811,53 @@ Recommendation: Immediate emergency care required. Report has been sent to the h
                     className="flex items-center space-x-2"
                     onClick={() => {
                       if (isReading) {
-                        if (isReadingPaused) {
-                          speechSynthesis.resume();
-                          setIsReadingPaused(false);
-                        } else {
-                          speechSynthesis.pause();
-                          setIsReadingPaused(true);
-                        }
+                        speechSynthesis.cancel();
+                        setIsReading(false);
+                        setIsReadingPaused(false);
                       }
                     }}
+                    disabled={!isReading}
                   >
                     <VolumeX className="w-4 h-4" />
-                    <span>{isReadingPaused ? 'Continue' : 'Stop Reading'}</span>
+                    <span>Stop Reading</span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center space-x-2"
+                    onClick={() => {
+                      const blob = new Blob([summary], { type: 'text/plain' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `emergency-report-${Date.now()}.txt`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast({
+                        title: "Report Downloaded",
+                        description: "Emergency report has been downloaded as a text file",
+                      });
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download PDF</span>
                   </Button>
                   
-                  <ShareButton
-                    title="Emergency Medical Report"
-                    text={summary}
-                    variant="outline"
-                  />
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center space-x-2"
+                    onClick={() => {
+                      toast({
+                        title: "Report Sent",
+                        description: "Emergency report has been sent to the hospital (simulated)",
+                      });
+                    }}
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Send to Hospital</span>
+                  </Button>
                 </div>
 
                 {/* Reset Button */}
