@@ -4,58 +4,99 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Phone, Users, UserCheck, Share2, Languages, Volume2, AlertTriangle, VolumeX } from 'lucide-react';
-import AmbulanceTracker from '@/components/ui/AmbulanceTracker';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Phone, Users, UserCheck, Share2, Languages, Volume2, AlertTriangle, VolumeX, MapPin, Navigation } from 'lucide-react';
 import ShareButton from '@/components/ui/ShareButton';
 import { toast } from '@/hooks/use-toast';
 
 type UserType = 'general' | 'hospital' | null;
 type QuestionnaireState = 'selection' | 'questions' | 'summary';
+type QuestionType = 'text' | 'radio' | 'location';
 
-const questions = {
+interface Question {
+  text: string;
+  type: QuestionType;
+  options?: string[];
+}
+
+const questions: Record<'general' | 'hospital', Question[]> = {
   general: [
-    "What is the patient's age?",
-    "What is the patient's gender?", 
-    "What symptoms do you observe?",
-    "How long have the symptoms been present?",
-    "Is the patient conscious or unconscious?"
+    { 
+      text: "What is the emergency? (Describe briefly)",
+      type: "text",
+      options: ["Accident", "Unconscious person", "Chest pain", "Fire", "Fall", "Other"]
+    },
+    { 
+      text: "Is the person conscious and responsive?",
+      type: "radio",
+      options: ["Yes - awake and responding", "No - unconscious", "Semi-conscious / confused"]
+    },
+    { 
+      text: "Is the person breathing normally?",
+      type: "radio",
+      options: ["Yes", "No / struggling to breathe", "Gasping / abnormal breathing"]
+    },
+    { 
+      text: "Are there visible injuries or bleeding?",
+      type: "radio",
+      options: ["Severe bleeding", "Minor bleeding", "Broken bone suspected", "Burns", "No visible injuries"]
+    },
+    { 
+      text: "Where exactly are you located? (Provide landmark or select hospital)",
+      type: "location"
+    }
   ],
   hospital: [
-    "What is the patient's age?",
-    "What is the patient's gender?",
-    "What symptoms do you observe?", 
-    "How long have the symptoms been present?",
-    "Is the patient conscious or unconscious?",
-    "What is the patient's blood pressure?",
-    "What is the patient's pulse rate?",
-    "What is the patient's body temperature?",
-    "Does the patient have any known medical history?",
-    "Does the patient have any known allergies?"
+    { 
+      text: "Primary complaint / reason for emergency",
+      type: "text",
+      options: ["Chest pain", "Dyspnea", "Trauma", "Seizure", "Altered consciousness", "Other"]
+    },
+    { 
+      text: "Time of onset / when symptoms started",
+      type: "text"
+    },
+    { 
+      text: "Patient's level of consciousness (AVPU)",
+      type: "radio",
+      options: ["A - Alert", "V - Responds to voice", "P - Responds to pain", "U - Unresponsive"]
+    },
+    { 
+      text: "Vital signs (if available) - Heart rate",
+      type: "text"
+    },
+    { 
+      text: "Vital signs - Blood pressure",
+      type: "text"
+    },
+    { 
+      text: "Current breathing status",
+      type: "radio",
+      options: ["Normal", "Respiratory distress", "Cyanosis", "Wheezing / crackles", "Not breathing / cardiac arrest"]
+    },
+    { 
+      text: "History of present illness (brief summary)",
+      type: "text"
+    },
+    { 
+      text: "Past medical history",
+      type: "radio",
+      options: ["Diabetes", "Hypertension", "Cardiac disease", "Stroke", "Asthma/COPD", "None", "Other"]
+    },
+    { 
+      text: "Medications / Allergies",
+      type: "text"
+    }
   ]
 };
 
-// Mock responses for demonstration
-const mockResponses = {
-  general: [
-    "45 years old",
-    "Male", 
-    "Severe chest pain and shortness of breath",
-    "About 2 hours",
-    "Conscious but in distress"
-  ],
-  hospital: [
-    "45 years old",
-    "Male",
-    "Severe chest pain and shortness of breath", 
-    "About 2 hours",
-    "Conscious but in distress",
-    "150/95 mmHg",
-    "95 BPM irregular",
-    "98.6°F",
-    "History of hypertension",
-    "No known allergies"
-  ]
-};
+const dummyHospitals = [
+  { id: 1, name: "CityCare Multi-Specialty Hospital", lat: 17.3850, lng: 78.4867, distance: "2.3 km" },
+  { id: 2, name: "Lifeline Emergency Center", lat: 17.3900, lng: 78.4900, distance: "3.1 km" },
+  { id: 3, name: "HealthFirst Trauma Unit", lat: 17.3800, lng: 78.4800, distance: "1.8 km" },
+  { id: 4, name: "MetroAid Medical Hospital", lat: 17.3950, lng: 78.4950, distance: "4.5 km" }
+];
 
 export default function Emergency() {
   const [userType, setUserType] = useState<UserType>(null);
@@ -71,6 +112,9 @@ export default function Emergency() {
   const manualAnswerRef = useRef<string>('');
   const transcriptRef = useRef<string>('');
   const [textInput, setTextInput] = useState('');
+  const [radioValue, setRadioValue] = useState('');
+  const [selectedHospital, setSelectedHospital] = useState<number | null>(null);
+  const [locationEnabled, setLocationEnabled] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedSummary, setTranslatedSummary] = useState('');
@@ -89,56 +133,35 @@ export default function Emergency() {
     setState('questions');
     setCurrentQuestion(0);
     setResponses([]);
-  };
-
-  const handleNextQuestion = () => {
-    const currentQuestions = userType ? questions[userType] : [];
-    const mockResponseSet = userType ? mockResponses[userType] : [];
-    
-    // Add mock response
-    const newResponses = [...responses, mockResponseSet[currentQuestion] || 'No response'];
-    setResponses(newResponses);
-    
-    if (currentQuestion < currentQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else {
-      // Generate summary
-      generateSummary(newResponses);
-      setState('summary');
-    }
-  };
-
-  const handleSkip = () => {
-    const newResponses = [...responses, 'Skipped'];
-    setResponses(newResponses);
-    
-    const currentQuestions = userType ? questions[userType] : [];
-    if (currentQuestion < currentQuestions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-    } else {
-      generateSummary(newResponses);
-      setState('summary');
-    }
+    setFlowActive(true);
   };
 
   const generateSummary = (allResponses: string[]) => {
     if (userType === 'general') {
       setSummary(`Emergency Report Summary:
-Patient is a ${allResponses[0]} ${allResponses[1]}, ${allResponses[4]}, reporting ${allResponses[2]} for ${allResponses[3]}. Immediate medical attention recommended.`);
+Emergency Type: ${allResponses[0]}
+Patient Consciousness: ${allResponses[1]}
+Breathing Status: ${allResponses[2]}
+Injuries/Bleeding: ${allResponses[3]}
+Location: ${allResponses[4]}
+
+Immediate medical attention recommended. Report has been sent to the selected hospital.`);
     } else {
       setSummary(`Emergency Medical Report:
-Patient: ${allResponses[0]} ${allResponses[1]}
-Condition: ${allResponses[4]}
-Symptoms: ${allResponses[2]} (Duration: ${allResponses[3]})
-Vitals: BP ${allResponses[5]}, HR ${allResponses[6]}, Temp ${allResponses[7]}
-History: ${allResponses[8]}
-Allergies: ${allResponses[9]}
+Primary Complaint: ${allResponses[0]}
+Time of Onset: ${allResponses[1]}
+Consciousness (AVPU): ${allResponses[2]}
+Heart Rate: ${allResponses[3]}
+Blood Pressure: ${allResponses[4]}
+Breathing Status: ${allResponses[5]}
+History of Present Illness: ${allResponses[6]}
+Past Medical History: ${allResponses[7]}
+Medications/Allergies: ${allResponses[8]}
 
-Recommendation: Immediate emergency care required based on presenting symptoms and vital signs.`);
+Recommendation: Immediate emergency care required. Report has been sent to the hospital.`);
     }
   };
 
-  // Automatic voice flow utilities
   const speak = (text: string) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return Promise.resolve();
     try { window.speechSynthesis.cancel(); } catch {}
@@ -170,15 +193,6 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
       collected = collected.trim();
       setTranscript(collected);
       transcriptRef.current = collected;
-      if (/\bskip\b/i.test(collected)) {
-        try { rec.stop(); } catch {}
-        if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
-        setTranscript('Skipped');
-        transcriptRef.current = 'Skipped';
-        speak('Okay, skipping…').then(() => {
-          goNext('Skipped');
-        });
-      }
     };
     rec.onerror = () => {};
     try { rec.start(); } catch {}
@@ -198,9 +212,12 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     stopRecognition();
     setManualAnswer('');
     manualAnswerRef.current = '';
+    setTextInput('');
+    setRadioValue('');
     setStatus('processing');
+    
     setResponses((prev) => {
-      const normalized = /\bskip\b/i.test(answer) ? 'Skipped' : (answer ? answer : 'No response');
+      const normalized = answer ? answer : 'No response';
       const newRes = [...prev, normalized];
       const total = userType ? questions[userType].length : 0;
       if (newRes.length >= total) {
@@ -209,6 +226,10 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
         setState('summary');
         setFlowActive(false);
         setStatus('done');
+        toast({
+          title: "Report Generated",
+          description: "Emergency report has been sent to the hospital (simulated)",
+        });
       } else {
         setCurrentQuestion((q) => q + 1);
       }
@@ -221,27 +242,20 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     setStatus('asking');
     setTranscript('');
     transcriptRef.current = '';
-    await speak(questions[userType][currentQuestion]);
+    const currentQ = questions[userType][currentQuestion];
+    await speak(currentQ.text);
     setStatus('listening');
     startRecognition();
     if (timerRef.current) { clearTimeout(timerRef.current); }
     timerRef.current = window.setTimeout(() => {
       const manual = manualAnswerRef.current?.trim();
       const voice = transcriptRef.current?.trim();
-      if (manual && /\bskip\b/i.test(manual)) {
-        speak('Okay, skipping…').then(() => goNext('Skipped'));
-        return;
-      }
-      if (voice && /\bskip\b/i.test(voice)) {
-        speak('Okay, skipping…').then(() => goNext('Skipped'));
-        return;
-      }
-      const answer = manual || voice || 'No response';
+      const radio = radioValue?.trim();
+      const answer = radio || manual || voice || 'No response';
       goNext(answer);
-    }, 3000);
+    }, 5000); // 5 seconds wait for response
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
@@ -250,22 +264,21 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     };
   }, []);
 
-  // Drive the flow automatically
   useEffect(() => {
-    if (state === 'questions' && userType) {
-      if (!flowActive) {
-        setFlowActive(true);
-        askAndWait();
-      } else {
-        askAndWait();
-      }
+    if (state === 'questions' && userType && flowActive) {
+      askAndWait();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, userType, currentQuestion]);
 
-  const handleAction = (action: string) => {
-    console.log(`Performing action: ${action}`);
-    // In real implementation, these would call respective APIs
+  const handleManualSubmit = () => {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    const manual = manualAnswerRef.current?.trim();
+    const voice = transcriptRef.current?.trim();
+    const radio = radioValue?.trim();
+    const hospital = selectedHospital ? dummyHospitals.find(h => h.id === selectedHospital)?.name : '';
+    const answer = hospital || radio || manual || voice || textInput || 'No response';
+    goNext(answer);
   };
 
   const resetQuestionnaire = () => {
@@ -278,6 +291,10 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     transcriptRef.current = '';
     setManualAnswer('');
     manualAnswerRef.current = '';
+    setTextInput('');
+    setRadioValue('');
+    setSelectedHospital(null);
+    setLocationEnabled(false);
     setFlowActive(false);
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
     stopRecognition();
@@ -285,10 +302,36 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
     setStatus('idle');
   };
 
+  const handleLocationEnable = () => {
+    setLocationEnabled(true);
+    toast({
+      title: "Location Enabled",
+      description: "Showing nearby hospitals on the map",
+    });
+  };
+
+  const handleHospitalSelect = (hospitalId: number) => {
+    setSelectedHospital(hospitalId);
+    const hospital = dummyHospitals.find(h => h.id === hospitalId);
+    if (hospital) {
+      setTextInput(hospital.name);
+      setManualAnswer(hospital.name);
+      manualAnswerRef.current = hospital.name;
+      toast({
+        title: "Hospital Selected",
+        description: `${hospital.name} selected`,
+      });
+    }
+  };
+
+  const currentQ = userType && currentQuestion < questions[userType].length 
+    ? questions[userType][currentQuestion] 
+    : null;
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
+        {/* Header with Alert Button */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -300,164 +343,30 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                 <p className="text-muted-foreground">Voice-driven emergency questionnaire system</p>
               </div>
             </div>
-          </div>
-          
-          {/* Life Alert Button */}
-          <div className="mb-6">
-            <Button 
-              variant="destructive" 
-              size="lg"
-              onClick={() => {
-                // Send emergency alert to contacts
-                emergencyContacts.forEach(contact => {
-                  console.log(`Sending emergency alert to ${contact.name} at ${contact.phone}`);
-                });
-                toast({
-                  title: "Emergency Alert Sent!",
-                  description: `Alert sent to ${emergencyContacts.length} emergency contacts`,
-                  variant: "destructive"
-                });
-              }}
-              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700"
-            >
-              <AlertTriangle className="w-5 h-5" />
-              <span>LIFE ALERT - Send Emergency Message</span>
-            </Button>
+            
+            {/* Alert Button - Top Right */}
+            {state === 'selection' && (
+              <Button 
+                variant="destructive" 
+                size="lg"
+                onClick={() => {
+                  emergencyContacts.forEach(contact => {
+                    console.log(`🚨 Sending emergency alert to ${contact.name} at ${contact.phone}`);
+                  });
+                  toast({
+                    title: "🚨 Alert Sent!",
+                    description: `Emergency alert sent to ${emergencyContacts.length} contacts successfully (simulated)`,
+                    variant: "destructive"
+                  });
+                }}
+                className="flex items-center space-x-2 bg-red-600 hover:bg-red-700"
+              >
+                <AlertTriangle className="w-5 h-5" />
+                <span>ALERT</span>
+              </Button>
+            )}
           </div>
         </div>
-
-        {/* Ambulance Tracker - Enhanced Layout */}
-        {(state === 'questions' || state === 'summary') && (
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <div>
-              <Card className="h-fit">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span>🚑 Ambulance Status</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center space-x-3">
-                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
-                      Available - En Route
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-blue-100 rounded-full">
-                        <span className="text-blue-600">📍</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Current Location</p>
-                        <p className="font-semibold text-foreground">Downtown Medical Center</p>
-                        <p className="text-xs text-muted-foreground">Lat: 17.3850, Lng: 78.4867</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-red-100 rounded-full">
-                        <span className="text-red-600">🎯</span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Destination</p>
-                        <p className="font-semibold text-foreground">City General Hospital</p>
-                        <p className="text-xs text-muted-foreground">Emergency Department</p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start space-x-3">
-                      <div className="p-2 bg-orange-100 rounded-full">
-                        <span className="text-orange-600">⏱️</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-muted-foreground">Estimated Arrival Time</p>
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-2xl font-bold text-primary">8 mins</p>
-                          <p className="text-sm text-muted-foreground">4.2 km remaining</p>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                          <div 
-                            className="bg-gradient-to-r from-green-400 to-blue-500 h-3 rounded-full transition-all duration-1000"
-                            style={{ width: '75%' }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Progress: 75% complete</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            
-            <div>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">🗺️ Live Map Visualization</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
-                    {/* Mock Map Interface */}
-                    <div className="relative w-full h-48 bg-gradient-to-b from-blue-100 to-green-100 rounded-lg border overflow-hidden">
-                      {/* Roads */}
-                      <div className="absolute inset-0">
-                        <div className="absolute top-8 left-0 w-full h-1 bg-gray-400"></div>
-                        <div className="absolute top-16 left-0 w-full h-1 bg-gray-400"></div>
-                        <div className="absolute top-24 left-0 w-full h-1 bg-gray-400"></div>
-                        <div className="absolute left-8 top-0 w-1 h-full bg-gray-400"></div>
-                        <div className="absolute left-16 top-0 w-1 h-full bg-gray-400"></div>
-                        <div className="absolute left-24 top-0 w-1 h-full bg-gray-400"></div>
-                      </div>
-                      
-                      {/* Ambulance Icon */}
-                      <div className="absolute top-6 left-12 animate-pulse">
-                        <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">🚑</span>
-                        </div>
-                      </div>
-                      
-                      {/* Hospital Icon */}
-                      <div className="absolute bottom-6 right-8">
-                        <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs">🏥</span>
-                        </div>
-                      </div>
-                      
-                      {/* Route Line */}
-                      <svg className="absolute inset-0 w-full h-full">
-                        <path
-                          d="M 50 40 Q 100 60 150 160"
-                          stroke="#ef4444"
-                          strokeWidth="3"
-                          fill="none"
-                          strokeDasharray="5,5"
-                          className="animate-pulse"
-                        />
-                      </svg>
-                    </div>
-                    
-                    {/* Map Legend */}
-                    <div className="mt-4 flex justify-between text-xs text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span>Ambulance</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        <span>Hospital</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <div className="w-4 h-1 bg-red-400 border-dashed"></div>
-                        <span>Route</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
 
         {/* User Type Selection */}
         {state === 'selection' && (
@@ -507,7 +416,7 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
                           For medical professionals with access to detailed patient information
                         </p>
                         <Badge variant="outline" className="bg-accent/10 text-accent-dark">
-                          10 Questions
+                          9 Questions
                         </Badge>
                       </div>
                     </div>
@@ -518,92 +427,314 @@ Recommendation: Immediate emergency care required based on presenting symptoms a
           </Card>
         )}
 
-        {/* Questionnaire */}
-        {state === 'questions' && userType && (
-          <Card className="shadow-card">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Emergency Questionnaire</CardTitle>
-                  <CardDescription>
-                    Question {currentQuestion + 1} of {questions[userType].length}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline" className="bg-secondary/10 text-secondary">
-                  {userType === 'general' ? 'General Public' : 'Hospital Staff'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Progress Bar */}
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentQuestion + 1) / questions[userType].length) * 100}%` }}
-                  ></div>
-                </div>
+        {/* Questionnaire - Different layouts for General Public vs Hospital Staff */}
+        {state === 'questions' && userType && currentQ && (
+          <div className="space-y-6">
+            {/* General Public Layout: Summary at top, Map at bottom */}
+            {userType === 'general' && (
+              <>
+                {/* Emergency Medical Summary Card - Top */}
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Emergency Questionnaire</CardTitle>
+                        <CardDescription>
+                          Question {currentQuestion + 1} of {questions[userType].length}
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline" className="bg-secondary/10 text-secondary">
+                        General Public
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {/* Progress Bar */}
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${((currentQuestion + 1) / questions[userType].length) * 100}%` }}
+                        ></div>
+                      </div>
 
-                 {/* Current Question */}
-                <div className="bg-gradient-card p-6 rounded-lg border border-border">
-                  <h3 className="text-xl font-semibold text-foreground mb-4">
-                    {questions[userType][currentQuestion]}
-                  </h3>
-                  
-                  {/* Text Input Option */}
-                  <div className="mb-4">
-                    <Input
-                      placeholder="Type your answer here (optional)"
-                      value={textInput}
-                      onChange={(e) => {
-                        setTextInput(e.target.value);
-                        setManualAnswer(e.target.value);
-                        manualAnswerRef.current = e.target.value;
-                      }}
-                      className="mb-2"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      You can type your answer or speak. The system will automatically move to the next question in 3 seconds.
-                    </p>
+                      {/* Current Question */}
+                      <div className="bg-gradient-card p-6 rounded-lg border border-border">
+                        <h3 className="text-xl font-semibold text-foreground mb-4">
+                          {currentQ.text}
+                        </h3>
+                        
+                        {/* Question Input Based on Type */}
+                        {currentQ.type === 'text' && (
+                          <div className="space-y-4">
+                            {currentQ.options && (
+                              <Select onValueChange={(val) => {
+                                setTextInput(val);
+                                setManualAnswer(val);
+                                manualAnswerRef.current = val;
+                              }}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select an option or type below" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {currentQ.options.map((opt) => (
+                                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Input
+                              placeholder="Or type your answer here"
+                              value={textInput}
+                              onChange={(e) => {
+                                setTextInput(e.target.value);
+                                setManualAnswer(e.target.value);
+                                manualAnswerRef.current = e.target.value;
+                              }}
+                            />
+                          </div>
+                        )}
+
+                        {currentQ.type === 'radio' && currentQ.options && (
+                          <RadioGroup value={radioValue} onValueChange={setRadioValue}>
+                            <div className="space-y-3">
+                              {currentQ.options.map((opt) => (
+                                <div key={opt} className="flex items-center space-x-2">
+                                  <RadioGroupItem value={opt} id={opt} />
+                                  <Label htmlFor={opt} className="cursor-pointer">{opt}</Label>
+                                </div>
+                              ))}
+                            </div>
+                          </RadioGroup>
+                        )}
+
+                        {currentQ.type === 'location' && (
+                          <div className="space-y-4">
+                            {!locationEnabled && (
+                              <Button onClick={handleLocationEnable} className="w-full">
+                                <MapPin className="w-4 h-4 mr-2" />
+                                Enable Location & Show Nearby Hospitals
+                              </Button>
+                            )}
+                            {locationEnabled && (
+                              <div className="space-y-4">
+                                <div className="flex items-center space-x-2">
+                                  <Input
+                                    placeholder="Search hospital or enter location"
+                                    value={textInput}
+                                    onChange={(e) => {
+                                      setTextInput(e.target.value);
+                                      setManualAnswer(e.target.value);
+                                      manualAnswerRef.current = e.target.value;
+                                    }}
+                                    className="flex-1"
+                                  />
+                                  <Select onValueChange={(val) => handleHospitalSelect(parseInt(val))}>
+                                    <SelectTrigger className="w-48">
+                                      <SelectValue placeholder="Select hospital" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {dummyHospitals.map((hospital) => (
+                                        <SelectItem key={hospital.id} value={hospital.id.toString()}>
+                                          {hospital.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Voice Status */}
+                        <div className="mt-4 flex items-center space-x-2">
+                          <div className={`w-2 h-2 rounded-full ${status === 'listening' ? 'bg-secondary animate-pulse' : status === 'asking' ? 'bg-primary' : 'bg-muted-foreground'}`}></div>
+                          <span className="text-sm text-muted-foreground">
+                            {status === 'asking' && '🎤 Reading question...'}
+                            {status === 'listening' && '👂 Listening for your response...'}
+                            {status === 'processing' && '⚙️ Processing...'}
+                          </span>
+                        </div>
+
+                        {/* Detected Response */}
+                        {(transcript || textInput || radioValue) && (
+                          <div className="mt-4 bg-muted/30 p-4 rounded-lg">
+                            <p className="text-sm text-muted-foreground mb-1">Detected Response:</p>
+                            <p className="text-foreground font-medium">
+                              {radioValue || textInput || transcript}
+                            </p>
+                          </div>
+                        )}
+
+                        <Button onClick={handleManualSubmit} className="w-full mt-4">
+                          Submit & Continue
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Live Map Visualization - Bottom */}
+                {locationEnabled && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">🗺️ Nearby Hospitals</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-gradient-to-br from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
+                        <div className="relative w-full h-64 bg-gradient-to-b from-blue-100 to-green-100 rounded-lg border overflow-hidden">
+                          {/* Roads */}
+                          <div className="absolute inset-0">
+                            <div className="absolute top-8 left-0 w-full h-1 bg-gray-400"></div>
+                            <div className="absolute top-16 left-0 w-full h-1 bg-gray-400"></div>
+                            <div className="absolute top-24 left-0 w-full h-1 bg-gray-400"></div>
+                            <div className="absolute left-8 top-0 w-1 h-full bg-gray-400"></div>
+                            <div className="absolute left-16 top-0 w-1 h-full bg-gray-400"></div>
+                            <div className="absolute left-24 top-0 w-1 h-full bg-gray-400"></div>
+                          </div>
+                          
+                          {/* Hospital Pins */}
+                          {dummyHospitals.map((hospital, idx) => (
+                            <div
+                              key={hospital.id}
+                              className={`absolute cursor-pointer transform hover:scale-110 transition-transform ${selectedHospital === hospital.id ? 'z-10' : ''}`}
+                              style={{
+                                top: `${20 + idx * 15}%`,
+                                left: `${15 + idx * 20}%`
+                              }}
+                              onClick={() => handleHospitalSelect(hospital.id)}
+                            >
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedHospital === hospital.id ? 'bg-green-500 ring-4 ring-green-300' : 'bg-blue-500'}`}>
+                                <span className="text-white text-xs">🏥</span>
+                              </div>
+                              <div className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-white px-2 py-1 rounded shadow text-xs whitespace-nowrap">
+                                {hospital.name}
+                              </div>
+                            </div>
+                          ))}
+                          
+                          {/* User Location */}
+                          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                            <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4 text-xs text-muted-foreground">
+                          Click on hospital pins to select, or use the dropdown above
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {/* Hospital Staff Layout: Full screen summary, no map */}
+            {userType === 'hospital' && (
+              <Card className="shadow-card">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Emergency Medical Questionnaire</CardTitle>
+                      <CardDescription>
+                        Question {currentQuestion + 1} of {questions[userType].length}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="bg-accent/10 text-accent-dark">
+                      Hospital Staff
+                    </Badge>
                   </div>
-                  
-                  {/* Voice Controls */}
-                  <div className="flex items-center space-x-4 mb-4">
-                    <Button
-                      variant="default"
-                      size="lg"
-                      onClick={() => {}}
-                      className="flex items-center space-x-2"
-                    >
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {/* Progress Bar */}
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${((currentQuestion + 1) / questions[userType].length) * 100}%` }}
+                      ></div>
+                    </div>
+
+                    {/* Current Question */}
+                    <div className="bg-gradient-card p-6 rounded-lg border border-border">
+                      <h3 className="text-xl font-semibold text-foreground mb-4">
+                        {currentQ.text}
+                      </h3>
                       
-                      <span>Listening…</span>
-                    </Button>
-                    
-                    <div className="flex items-center space-x-2 text-secondary">
-                      <div className={`w-2 h-2 rounded-full ${status === 'listening' ? 'bg-secondary animate-pulse' : status === 'asking' ? 'bg-primary' : 'bg-muted-foreground'}`}></div>
-                      <span className="text-sm text-muted-foreground">
-                        {status === 'asking' && 'Asking…'}
-                        {status === 'listening' && 'Listening (3s)…'}
-                        {status === 'processing' && 'Processing…'}
-                        {status === 'idle' && 'Idle'}
-                        {status === 'done' && 'Completed'}
-                      </span>
+                      {/* Question Input Based on Type */}
+                      {currentQ.type === 'text' && (
+                        <div className="space-y-4">
+                          {currentQ.options && (
+                            <Select onValueChange={(val) => {
+                              setTextInput(val);
+                              setManualAnswer(val);
+                              manualAnswerRef.current = val;
+                            }}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select an option or type below" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {currentQ.options.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          <Input
+                            placeholder="Or type your answer here"
+                            value={textInput}
+                            onChange={(e) => {
+                              setTextInput(e.target.value);
+                              setManualAnswer(e.target.value);
+                              manualAnswerRef.current = e.target.value;
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {currentQ.type === 'radio' && currentQ.options && (
+                        <RadioGroup value={radioValue} onValueChange={setRadioValue}>
+                          <div className="space-y-3">
+                            {currentQ.options.map((opt) => (
+                              <div key={opt} className="flex items-center space-x-2">
+                                <RadioGroupItem value={opt} id={opt} />
+                                <Label htmlFor={opt} className="cursor-pointer">{opt}</Label>
+                              </div>
+                            ))}
+                          </div>
+                        </RadioGroup>
+                      )}
+                      
+                      {/* Voice Status */}
+                      <div className="mt-4 flex items-center space-x-2">
+                        <div className={`w-2 h-2 rounded-full ${status === 'listening' ? 'bg-secondary animate-pulse' : status === 'asking' ? 'bg-primary' : 'bg-muted-foreground'}`}></div>
+                        <span className="text-sm text-muted-foreground">
+                          {status === 'asking' && '🎤 Reading question...'}
+                          {status === 'listening' && '👂 Listening for your response...'}
+                          {status === 'processing' && '⚙️ Processing...'}
+                        </span>
+                      </div>
+
+                      {/* Detected Response */}
+                      {(transcript || textInput || radioValue) && (
+                        <div className="mt-4 bg-muted/30 p-4 rounded-lg">
+                          <p className="text-sm text-muted-foreground mb-1">Detected Response:</p>
+                          <p className="text-foreground font-medium">
+                            {radioValue || textInput || transcript}
+                          </p>
+                        </div>
+                      )}
+
+                      <Button onClick={handleManualSubmit} className="w-full mt-4">
+                        Submit & Continue
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Mock Response Display */}
-                  <div className="bg-muted/30 p-4 rounded-lg mb-4">
-                    <p className="text-sm text-muted-foreground mb-2">Detected Response:</p>
-                    <p className="text-foreground font-medium">
-                      {textInput || transcript || (status === 'listening' ? '…' : 'No response yet')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-xs text-muted-foreground">Will move to next question automatically.</div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
 
         {/* Summary */}
